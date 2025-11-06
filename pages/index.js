@@ -132,6 +132,93 @@ export default function PasswordManager() {
     setShowForm(false);
   };
 
+  // -----------------------
+  // Simulation helpers
+  // -----------------------
+
+  /**
+   * Trigger a download of the harmless simulated payload file from the server.
+   * Server endpoint expected: GET /download-simulated-payload
+   *
+   * NOTE: This only downloads a benign .txt file in the safe-demo server provided earlier.
+   */
+  const downloadSimulatedPayload = async () => {
+    // Confirm with the user to avoid accidental downloads
+    const ok = window.confirm(
+      'This will download a harmless simulated payload text file (for demo only). Continue?'
+    );
+    if (!ok) return;
+
+    try {
+      // Create a hidden anchor to download
+      const res = await fetch('/download-simulated-payload', { method: 'GET' });
+      if (!res.ok) throw new Error('Failed to fetch simulated payload');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      // filename suggested by server may be used; we provide fallback
+      a.download = 'simulated_payload.txt';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      alert('Simulated payload downloaded (harmless).');
+    } catch (err) {
+      console.error('Download failed', err);
+      alert('Failed to download simulated payload.');
+    }
+  };
+
+  /**
+   * Simulate an attack by sending only placeholder/demo values to the safe server endpoint.
+   * Server endpoint expected: POST /simulate-attack with JSON body { simulation: true, username, password, note }
+   *
+   * IMPORTANT: This must never send actual stored credentials. We intentionally send placeholders only.
+   */
+  const simulateAttack = async () => {
+    const confirmSim = window.confirm(
+      'Simulate an attack? This will send only placeholder/demo values to the local demo server (no real credentials).'
+    );
+    if (!confirmSim) return;
+
+    try {
+      // Example safe placeholder data — DO NOT REPLACE WITH REAL CREDENTIALS
+      const payload = {
+        simulation: true,
+        // You can change these placeholders to meaningful demo labels but NEVER real user data.
+        username: 'demo_user@example.com',
+        password: 'DemoP@ssw0rd!',
+        note: 'This is a simulated exfiltration for demo purposes only.'
+      };
+
+      const res = await fetch('/simulate-attack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Server rejected simulation: ${text}`);
+      }
+
+      const result = await res.json();
+      if (result && result.ok) {
+        alert('Simulation recorded on server (safe demo). Check server logs for the simulated entry.');
+      } else {
+        alert('Simulation request completed — check server logs for details.');
+      }
+    } catch (err) {
+      console.error('Simulation failed', err);
+      alert('Failed to perform simulation. See console for details.');
+    }
+  };
+
+  // -----------------------
+  // End simulation helpers
+  // -----------------------
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center">
@@ -190,12 +277,32 @@ export default function PasswordManager() {
             <Shield className="w-8 h-8 text-indigo-600" />
             <h1 className="text-2xl font-bold text-gray-800">Password Manager</h1>
           </div>
-          <button
-            onClick={() => setIsUnlocked(false)}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
-          >
-            Lock Vault
-          </button>
+
+          <div className="flex items-center gap-3">
+            {/* Safe Demo Buttons */}
+            <button
+              onClick={downloadSimulatedPayload}
+              className="px-3 py-2 bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition"
+              title="Download a harmless simulated payload file (demo only)"
+            >
+              Download Simulated Payload
+            </button>
+
+            <button
+              onClick={simulateAttack}
+              className="px-3 py-2 bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition"
+              title="Simulate an attack (sends only placeholder/demo values)"
+            >
+              Simulate Attack
+            </button>
+
+            <button
+              onClick={() => setIsUnlocked(false)}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+            >
+              Lock Vault
+            </button>
+          </div>
         </div>
       </header>
 
@@ -364,3 +471,4 @@ export default function PasswordManager() {
     </div>
   );
 }
+
